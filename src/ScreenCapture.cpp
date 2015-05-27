@@ -260,6 +260,8 @@ void ScreenCapture::displayResult() {
     int window_region_width = round((double) window_width / x_region_count);
     int window_region_height = round((double) window_height / y_region_count);
 
+    const unsigned char white[] = {255,255,255};
+
     CImg<unsigned char> visu(window_width, window_height, 1, 3, 0);
     CImgDisplay draw_disp(visu, "Intensity profile");
     draw_disp.move((actual_width / 2) - (window_width / 2), (actual_height / 2) - (window_height / 2));
@@ -284,12 +286,11 @@ void ScreenCapture::displayResult() {
         std::string s = std::to_string(1000000 / (frameTime / frameCount));
         char const *pchar = s.c_str();
 
-        visu.draw_text(window_width / 2, window_height / 2, pchar, &regions[0]);
+        visu.draw_text(window_width / 2, window_height / 2, pchar, white);
 
         visu.display(draw_disp);
 
-
-        cout << "Memory Usage: " << getValue() << endl;
+        //cout << "Memory Usage: " << getValue() << endl;
     }
 
 }

@@ -1,0 +1,36 @@
+1 Split into Client and Server
+    1.1 - Server
+        1.1.1 - Graphical configuration tool
+        1.1.2 - Adjust regions size for both width and height
+        1.1.3 - Adjust refresh rate
+        1.1.4 - Socket Server
+        1.1.5 - SHM Capability
+    1.2 - Client
+        1.2.1 - Graphical configuration tool
+        1.2.2 - Resizable
+        1.2.3 - Display current output
+        1.2.4 - Socket Client
+
+2 Config File
+    2.1 - Generate inital config file on first run
+    2.2 - Number of regions for both width and height
+    2.3 - IP address  for socket communication
+    2.4 - Port number for socket communication
+    2.5 - Set target refresh rate
+
+3 Black bar
+    3.1 -  Black bar region detection
+    3.2 - Black bar poll rate
+
+4 SHM
+    4.1 - Add ability to use X-SHM
+
+5 Adalight
+    5.1 - Add ability use communicate with the adalight arduino software
+
+6 Microcontrollers
+    6.1 - Add support for the RaspberryPI
+    6.2 - Add support for the Arduino
+
+7 Windows
+    7.1 - Add windows support using GDI/ DX12/ Windows Media API
