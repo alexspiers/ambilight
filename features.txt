@@ -18,10 +18,6 @@
     2.4 - Port number for socket communication
     2.5 - Set target refresh rate
 
-3 Black bar
-    3.1 -  Black bar region detection
-    3.2 - Black bar poll rate
-
 4 SHM
     4.1 - Add ability to use X-SHM
 
@@ -34,3 +30,12 @@
 
 7 Windows
     7.1 - Add windows support using GDI/ DX12/ Windows Media API
+
+
+Completed:
+3 Black bar
+    3.1 -  Black bar region detection
+    3.2 - Black bar poll rate
+
+
+
