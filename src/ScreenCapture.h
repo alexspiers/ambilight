@@ -42,6 +42,7 @@ private:
 	int targetRefreshInterval;
 
 	int blackBarDetectRate;
+	int blackThreshold;
 	int y_offset;
 
 	void init();

@@ -39,6 +39,7 @@ ScreenCapture::ScreenCapture() {
 
     targetRefreshRate = 30;
     blackBarDetectRate = 3;
+    blackThreshold = 10;
 
     detectBlackBar();
 
@@ -166,54 +167,40 @@ void ScreenCapture::captureScreen() {
     int regionCount = region_width * region_height;
 
     /*
-     * Top image pixel processing
+     * Top and bottom image pixel processing
      */
     for (int y = 0; y < region_height; ++y) {
         for (int x = 0; x < screen_width; ++x) {
-            int regionIndex = (x / region_width) * 3;
-            unsigned long pixel = XGetPixel(topImage, x, y);
-            regions[regionIndex + 0] += (pixel & 0x00ff0000) >> 16;
-            regions[regionIndex + 1] += (pixel & 0x0000ff00) >> 8;
-            regions[regionIndex + 2] += (pixel & 0x000000ff);
+            int topRegionIndex = (x / region_width) * 3;
+            unsigned long topPixel = XGetPixel(topImage, x, y);
+            regions[topRegionIndex + 0] += (topPixel & 0x00ff0000) >> 16;
+            regions[topRegionIndex + 1] += (topPixel & 0x0000ff00) >> 8;
+            regions[topRegionIndex + 2] += (topPixel & 0x000000ff);
+
+            int bottomRegionIndex = ((x / region_width + (region_count - x_region_count)) * 3);
+            unsigned long bottomPixel = XGetPixel(bottomImage, x, y);
+            regions[bottomRegionIndex + 0] += (bottomPixel & 0x00ff0000) >> 16;
+            regions[bottomRegionIndex + 1] += (bottomPixel & 0x0000ff00) >> 8;
+            regions[bottomRegionIndex + 2] += (bottomPixel & 0x000000ff);
         }
     }
 
     /*
-     * Left hand side pixel processing
+     * Side pixel processing
      */
     for (int y = 0; y < (y_region_count - 2) * region_height; ++y) {
         for (int x = 0; x < region_width; ++x) {
-            int regionIndex = (((y / region_height) * 2) + x_region_count) * 3;
-            unsigned long pixel = XGetPixel(leftImage, x, y);
-            regions[regionIndex + 0] += (pixel & 0x00ff0000) >> 16;
-            regions[regionIndex + 1] += (pixel & 0x0000ff00) >> 8;
-            regions[regionIndex + 2] += (pixel & 0x000000ff);
-        }
-    }
+            int rightRegionIndex = (((y / region_height) * 2) + (x_region_count + 1)) * 3;
+            unsigned long rightPixel = XGetPixel(rightImage, x, y);
+            regions[rightRegionIndex + 0] += (rightPixel & 0x00ff0000) >> 16;
+            regions[rightRegionIndex + 1] += (rightPixel & 0x0000ff00) >> 8;
+            regions[rightRegionIndex + 2] += (rightPixel & 0x000000ff);
 
-    /*
-     * Right hand side pixel processing
-     */
-    for (int y = 0; y < (y_region_count - 2) * region_height; ++y) {
-        for (int x = 0; x < region_width; ++x) {
-            int regionIndex = (((y / region_height) * 2) + (x_region_count + 1)) * 3;
-            unsigned long pixel = XGetPixel(rightImage, x, y);
-            regions[regionIndex + 0] += (pixel & 0x00ff0000) >> 16;
-            regions[regionIndex + 1] += (pixel & 0x0000ff00) >> 8;
-            regions[regionIndex + 2] += (pixel & 0x000000ff);
-        }
-    }
-
-    /*
-     * Bottom image pixel processing
-     */
-    for (int y = 0; y < region_height; ++y) {
-        for (int x = 0; x < screen_width; ++x) {
-            int regionIndex = ((x / region_width + (region_count - x_region_count)) * 3);
-            unsigned long pixel = XGetPixel(bottomImage, x, y);
-            regions[regionIndex + 0] += (pixel & 0x00ff0000) >> 16;
-            regions[regionIndex + 1] += (pixel & 0x0000ff00) >> 8;
-            regions[regionIndex + 2] += (pixel & 0x000000ff);
+            int leftRegionIndex = (((y / region_height) * 2) + x_region_count) * 3;
+            unsigned long leftPixel = XGetPixel(leftImage, x, y);
+            regions[leftRegionIndex + 0] += (leftPixel & 0x00ff0000) >> 16;
+            regions[leftRegionIndex + 1] += (leftPixel & 0x0000ff00) >> 8;
+            regions[leftRegionIndex + 2] += (leftPixel & 0x000000ff);
         }
     }
 
@@ -260,7 +247,7 @@ void ScreenCapture::displayResult() {
         frameCount++;
         if ((endTime - startTime) < targetRefreshInterval) {
             unsigned int sleepTime = targetRefreshInterval - (endTime - startTime);
-            usleep(sleepTime);
+            //usleep(sleepTime);
         }
 
         for (int i = 0; i < x_region_count; ++i) {
@@ -311,7 +298,7 @@ void ScreenCapture::detectBlackBar() {
             unsigned char bottom_green = (bottom_pixel & 0x0000ff00) >> 8;
             unsigned char bottom_blue = (bottom_pixel & 0x000000ff);
 
-            if (top_red < 10 && top_green < 10 && top_blue < 10 && bottom_red < 10 && bottom_green < 10 && bottom_blue < 10) {
+            if (top_red < blackThreshold && top_green < blackThreshold && top_blue < blackThreshold && bottom_red < blackThreshold && bottom_green < blackThreshold && bottom_blue < blackThreshold) {
                 if (y > y_offset) {
                     y_offset = y;
                 }
