@@ -29,30 +29,6 @@ long frameTime = 0;
 #include "stdio.h"
 #include "string.h"
 
-int parseLine(char* line) {
-    int i = strlen(line);
-    while (*line < '0' || *line > '9')
-        line++;
-    line[i - 3] = '\0';
-    i = atoi(line);
-    return i;
-}
-
-int getValue() { //Note: this value is in KB!
-    FILE* file = fopen("/proc/self/status", "r");
-    int result = -1;
-    char line[128];
-
-    while (fgets(line, 128, file) != NULL) {
-        if (strncmp(line, "VmSize:", 7) == 0) {
-            result = parseLine(line);
-            break;
-        }
-    }
-    fclose(file);
-    return result;
-}
-
 ScreenCapture::ScreenCapture() {
     init();
 
@@ -60,6 +36,11 @@ ScreenCapture::ScreenCapture() {
     y_region_count = 10;
     screen_width = actual_width;
     screen_height = actual_height;
+
+    targetRefreshRate = 30;
+    blackBarDetectRate = 3;
+
+    detectBlackBar();
 
     clock_t start = clock();
     calculateRegion();
@@ -76,6 +57,8 @@ ScreenCapture::ScreenCapture() {
     cout << "Number of Regions: " << ((2 * x_region_count) + (y_region_count - 2) * 2) << endl;
 
     displayResult();
+
+    //detectBlackBar();
 }
 
 ScreenCapture::~ScreenCapture() {
@@ -118,6 +101,8 @@ void ScreenCapture::init() {
 void ScreenCapture::calculateRegion() {
     region_width = round((double) screen_width / x_region_count);
     region_height = round((double) screen_height / y_region_count);
+
+    targetRefreshInterval = 1000000 / targetRefreshRate;
 
     region_count = ((2 * x_region_count) + (y_region_count - 2) * 2);
 
@@ -173,12 +158,10 @@ void ScreenCapture::captureScreenSHM() {
 }
 
 void ScreenCapture::captureScreen() {
-    clock_t start = clock();
-
-    XImage *topImage = XGetImage(display, rootWindow, 0, 0, screen_width, region_height, AllPlanes, ZPixmap);
-    XImage *leftImage = XGetImage(display, rootWindow, 0, region_height, region_width, (screen_height - 2 * region_height), AllPlanes, ZPixmap);
-    XImage *rightImage = XGetImage(display, rootWindow, (screen_width - region_width), region_height, region_width, (screen_height - 2 * region_height), AllPlanes, ZPixmap);
-    XImage *bottomImage = XGetImage(display, rootWindow, 0, (screen_height - region_height), screen_width, region_height, AllPlanes, ZPixmap);
+    XImage *topImage = XGetImage(display, rootWindow, 0, y_offset, screen_width, region_height, AllPlanes, ZPixmap);
+    XImage *leftImage = XGetImage(display, rootWindow, 0, y_offset + region_height, region_width, (screen_height - 2 * region_height), AllPlanes, ZPixmap);
+    XImage *rightImage = XGetImage(display, rootWindow, (screen_width - region_width), y_offset + region_height, region_width, (screen_height - 2 * region_height), AllPlanes, ZPixmap);
+    XImage *bottomImage = XGetImage(display, rootWindow, 0, (screen_height - region_height) + y_offset, screen_width, region_height, AllPlanes, ZPixmap);
 
     int regionCount = region_width * region_height;
 
@@ -245,22 +228,17 @@ void ScreenCapture::captureScreen() {
     XDestroyImage(leftImage);
     XDestroyImage(rightImage);
     XDestroyImage(bottomImage);
-
-    clock_t end = clock();
-
-    frameTime += (end - start);
-    frameCount++;
 }
 
 void ScreenCapture::displayResult() {
 
-    int window_width = 1280;
-    int window_height = 720;
+    int window_width = actual_width / 2;
+    int window_height = actual_height / 2;
 
     int window_region_width = round((double) window_width / x_region_count);
     int window_region_height = round((double) window_height / y_region_count);
 
-    const unsigned char white[] = {255,255,255};
+    const unsigned char white[] = { 255, 255, 255 };
 
     CImg<unsigned char> visu(window_width, window_height, 1, 3, 0);
     CImgDisplay draw_disp(visu, "Intensity profile");
@@ -269,7 +247,21 @@ void ScreenCapture::displayResult() {
     while (!draw_disp.is_closed()) {
         visu.fill(0);
 
+        if (frameCount % (blackBarDetectRate * targetRefreshRate) == 0) {
+            detectBlackBar();
+            calculateRegion();
+        }
+
+        clock_t startTime = clock();
         captureScreen();
+        clock_t endTime = clock();
+
+        frameTime += (endTime - startTime);
+        frameCount++;
+        if ((endTime - startTime) < targetRefreshInterval) {
+            unsigned int sleepTime = targetRefreshInterval - (endTime - startTime);
+            usleep(sleepTime);
+        }
 
         for (int i = 0; i < x_region_count; ++i) {
             visu.draw_rectangle(window_region_width * i, 0, window_region_width * (i + 1), window_region_height, &regions[i * 3], 1);
@@ -283,21 +275,63 @@ void ScreenCapture::displayResult() {
                     &regions[(x_region_count + 1 + (i * 2)) * 3], 1);
         }
 
-        std::string s = std::to_string(1000000 / (frameTime / frameCount));
-        char const *pchar = s.c_str();
+        std::string frameRateString = std::to_string(1000000 / (frameTime / frameCount));
+        char const *frameRateChar = frameRateString.c_str();
 
-        visu.draw_text(window_width / 2, window_height / 2, pchar, white);
+        std::string resolutionString = std::to_string(screen_height) + "x" + std::to_string(screen_width);
+        char const *resolutionChar = resolutionString.c_str();
+
+        visu.draw_text(window_width / 2, window_height / 2, frameRateChar, white);
+        visu.draw_text(window_width / 2, (window_height / 2) + 50, resolutionChar, white);
 
         visu.display(draw_disp);
 
         //cout << "Memory Usage: " << getValue() << endl;
     }
 
+    draw_disp.close();
+}
+
+void ScreenCapture::detectBlackBar() {
+    clock_t s = clock();
+    XImage *topImage = XGetImage(display, rootWindow, 0, 0, actual_width, actual_height, AllPlanes, ZPixmap);
+
+    bool continueSearch = true;
+    y_offset = 0;
+
+    for (int y = 0; y < actual_height && continueSearch; ++y) {
+        for (int x = 0; x < actual_width && continueSearch; x += 2) {
+            unsigned long top_pixel = XGetPixel(topImage, x, (actual_height - 1) - y);
+            unsigned char top_red = (top_pixel & 0x00ff0000) >> 16;
+            unsigned char top_green = (top_pixel & 0x0000ff00) >> 8;
+            unsigned char top_blue = (top_pixel & 0x000000ff);
+
+            unsigned long bottom_pixel = XGetPixel(topImage, x, y);
+            unsigned char bottom_red = (bottom_pixel & 0x00ff0000) >> 16;
+            unsigned char bottom_green = (bottom_pixel & 0x0000ff00) >> 8;
+            unsigned char bottom_blue = (bottom_pixel & 0x000000ff);
+
+            if (top_red < 10 && top_green < 10 && top_blue < 10 && bottom_red < 10 && bottom_green < 10 && bottom_blue < 10) {
+                if (y > y_offset) {
+                    y_offset = y;
+                }
+            } else {
+                continueSearch = false;
+            }
+        }
+    }
+
+    XDestroyImage(topImage);
+
+    screen_height = actual_height - 2 * y_offset;
+
+    cout << "The resultant y_offset is " << y_offset << endl;
+    cout << "Time taken: " << (clock() - s) << endl;
 }
 
 int main() {
     try {
-        new ScreenCapture();
+        ScreenCapture();
     } catch (char *message) {
         cout << "Error: " << message << endl;
         return 1;

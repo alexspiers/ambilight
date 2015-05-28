@@ -38,10 +38,18 @@ private:
 	int region_count;
 	vector<int> regions;
 
+	int targetRefreshRate;
+	int targetRefreshInterval;
+
+	int blackBarDetectRate;
+	int y_offset;
+
 	void init();
 	void calculateRegion();
 	void captureScreen();
 	void displayResult();
+
+	void detectBlackBar();
 
 	void captureScreenSHM();
 };
