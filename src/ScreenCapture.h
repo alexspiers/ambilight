@@ -46,6 +46,7 @@ private:
 	int y_offset;
 
 	void init();
+	void loadConfig();
 	void calculateRegion();
 	void captureScreen();
 	void displayResult();

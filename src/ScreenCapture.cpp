@@ -29,17 +29,12 @@ long frameTime = 0;
 #include "stdio.h"
 #include "string.h"
 
+#include <fstream>
+
 ScreenCapture::ScreenCapture() {
     init();
 
-    x_region_count = 20;
-    y_region_count = 10;
-    screen_width = actual_width;
-    screen_height = actual_height;
-
-    targetRefreshRate = 30;
-    blackBarDetectRate = 3;
-    blackThreshold = 10;
+    loadConfig();
 
     detectBlackBar();
 
@@ -99,7 +94,68 @@ void ScreenCapture::init() {
     actual_height = gwa.height;
 }
 
+void ScreenCapture::loadConfig() {
+    const std::string fileName = "config.amb";
+    ifstream configFile(fileName.c_str());
+
+    if (configFile.good()) {
+        //Load from configuration file
+        string line;
+
+        while (std::getline(configFile, line)) {
+            string prefix = line.substr(0, 2);
+            if (prefix != "//" && line != "") {
+                if(line.find("Xcount=") == 0){
+                    x_region_count = atoi(line.substr(7).c_str());
+                } else if(line.find("Ycount=") == 0){
+                    y_region_count = atoi(line.substr(7).c_str());
+                } else if(line.find("refreshRate=") == 0){
+                    targetRefreshRate = atoi(line.substr(12).c_str());
+                } else if(line.find("blackBarRate=") == 0){
+                    blackBarDetectRate = atoi(line.substr(13).c_str());
+                } else if(line.find("blackThreshold=") == 0){
+                    blackThreshold = atoi(line.substr(15).c_str());
+                }
+            }
+
+        }
+
+    } else {
+        //Create configuration file
+        ofstream file;
+        file.open(fileName);
+        file << "// Example Configuration File For Ambilight Clone" << endl;
+        file << "// Specifies the number of LEDs that go across the top and the bottom of the screen" << endl;
+        file << "Xcount=20" << endl;
+        file << endl;
+        file << "// Specifies the number of LEDs that go along the vertical edges of the screen" << endl;
+        file << "Ycount=10" << endl;
+        file << endl;
+        file << "// Specifies the target number of frames to capture the screen at" << endl;
+        file << "refreshRate=30" << endl;
+        file << endl;
+        file << "// Specifies the number of seconds between detecting black bars" << endl;
+        file << "blackBarRate=3" << endl;
+        file << endl;
+        file << "// Specifies the maximum level that the colour of all channels of a pixel must have to be regarded as black" << endl;
+        file << "blackThreshold=10" << endl;
+        file.close();
+
+    }
+
+    //Load the default values
+//    x_region_count = 20;
+//    y_region_count = 10;
+//
+//    targetRefreshRate = 30;
+//    blackBarDetectRate = 3;
+//    blackThreshold = 10;
+}
+
 void ScreenCapture::calculateRegion() {
+    screen_width = actual_width;
+    screen_height = actual_height;
+
     region_width = round((double) screen_width / x_region_count);
     region_height = round((double) screen_height / y_region_count);
 
