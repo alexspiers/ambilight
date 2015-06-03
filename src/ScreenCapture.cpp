@@ -215,18 +215,18 @@ void ScreenCapture::captureScreenSHM() {
 }
 
 void ScreenCapture::captureScreen() {
-    XImage *topImage = XGetImage(display, rootWindow, 0, y_offset, screen_width, region_height, AllPlanes, ZPixmap);
-    XImage *leftImage = XGetImage(display, rootWindow, 0, y_offset + region_height, region_width, (screen_height - 2 * region_height), AllPlanes, ZPixmap);
-    XImage *rightImage = XGetImage(display, rootWindow, (screen_width - region_width), y_offset + region_height, region_width, (screen_height - 2 * region_height), AllPlanes, ZPixmap);
-    XImage *bottomImage = XGetImage(display, rootWindow, 0, (screen_height - region_height) + y_offset, screen_width, region_height, AllPlanes, ZPixmap);
+    XImage *topImage    = XGetImage(display, rootWindow, 0,                             y_offset,                                   screen_width, region_height,                        AllPlanes, ZPixmap);
+    XImage *leftImage   = XGetImage(display, rootWindow, 0,                             y_offset + region_height,                   region_width, (screen_height - 2 * region_height),  AllPlanes, ZPixmap);
+    XImage *rightImage  = XGetImage(display, rootWindow, (screen_width - region_width), y_offset + region_height,                   region_width, (screen_height - 2 * region_height),  AllPlanes, ZPixmap);
+    XImage *bottomImage = XGetImage(display, rootWindow, 0,                             (screen_height - region_height) - y_offset, screen_width, region_height,                        AllPlanes, ZPixmap);
 
-    int regionCount = region_width * region_height;
+    int regionCount = region_width * region_height / 2;
 
     /*
      * Top and bottom image pixel processing
      */
     for (int y = 0; y < region_height; ++y) {
-        for (int x = 0; x < screen_width; ++x) {
+        for (int x = 0; x < screen_width; x+=2) {
             int topRegionIndex = (x / region_width) * 3;
             unsigned long topPixel = XGetPixel(topImage, x, y);
             regions[topRegionIndex + 0] += (topPixel & 0x00ff0000) >> 16;
@@ -244,7 +244,7 @@ void ScreenCapture::captureScreen() {
     /*
      * Side pixel processing
      */
-    for (int y = 0; y < (y_region_count - 2) * region_height; ++y) {
+    for (int y = 0; y < (y_region_count - 2) * region_height; y+=2) {
         for (int x = 0; x < region_width; ++x) {
             int rightRegionIndex = (((y / region_height) * 2) + (x_region_count + 1)) * 3;
             unsigned long rightPixel = XGetPixel(rightImage, x, y);

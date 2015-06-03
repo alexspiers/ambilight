@@ -36,7 +36,7 @@ private:
 	XWindowAttributes gwa;
 
 	int region_count;
-	vector<int> regions;
+	std::vector<int> regions;
 
 	int targetRefreshRate;
 	int targetRefreshInterval;
