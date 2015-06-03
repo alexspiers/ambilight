@@ -215,10 +215,12 @@ void ScreenCapture::captureScreenSHM() {
 }
 
 void ScreenCapture::captureScreen() {
-    XImage *topImage    = XGetImage(display, rootWindow, 0,                             y_offset,                                   screen_width, region_height,                        AllPlanes, ZPixmap);
-    XImage *leftImage   = XGetImage(display, rootWindow, 0,                             y_offset + region_height,                   region_width, (screen_height - 2 * region_height),  AllPlanes, ZPixmap);
-    XImage *rightImage  = XGetImage(display, rootWindow, (screen_width - region_width), y_offset + region_height,                   region_width, (screen_height - 2 * region_height),  AllPlanes, ZPixmap);
-    XImage *bottomImage = XGetImage(display, rootWindow, 0,                             (screen_height - region_height) - y_offset, screen_width, region_height,                        AllPlanes, ZPixmap);
+    XImage *topImage    = XGetImage(display, rootWindow, 0,                             y_offset,                                   screen_width, region_height,                                    AllPlanes, ZPixmap);
+    XImage *leftImage   = XGetImage(display, rootWindow, 0,                             y_offset + region_height,                   region_width, (screen_height - 2 * region_height) - y_offset,   AllPlanes, ZPixmap);
+    XImage *rightImage  = XGetImage(display, rootWindow, (screen_width - region_width), y_offset + region_height,                   region_width, (screen_height - 2 * region_height) - y_offset,   AllPlanes, ZPixmap);
+    XImage *bottomImage = XGetImage(display, rootWindow, 0,                             (screen_height - region_height) - y_offset, screen_width, region_height,                                    AllPlanes, ZPixmap);
+
+    cout << &(topImage->data) << endl;
 
     int regionCount = region_width * region_height / 2;
 
@@ -303,7 +305,7 @@ void ScreenCapture::displayResult() {
         frameCount++;
         if ((endTime - startTime) < targetRefreshInterval) {
             unsigned int sleepTime = targetRefreshInterval - (endTime - startTime);
-            //usleep(sleepTime);
+            usleep(sleepTime);
         }
 
         for (int i = 0; i < x_region_count; ++i) {
@@ -318,7 +320,9 @@ void ScreenCapture::displayResult() {
                     &regions[(x_region_count + 1 + (i * 2)) * 3], 1);
         }
 
-        std::string frameRateString = std::to_string(1000000 / (frameTime / frameCount));
+        int calculatedFrameRate = 1000000 / (frameTime / frameCount);
+
+        std::string frameRateString = std::to_string(min(calculatedFrameRate, targetRefreshRate));
         char const *frameRateChar = frameRateString.c_str();
 
         std::string resolutionString = std::to_string(screen_height) + "x" + std::to_string(screen_width);
@@ -328,8 +332,6 @@ void ScreenCapture::displayResult() {
         visu.draw_text(window_width / 2, (window_height / 2) + 50, resolutionChar, white);
 
         visu.display(draw_disp);
-
-        //cout << "Memory Usage: " << getValue() << endl;
     }
 
     draw_disp.close();
